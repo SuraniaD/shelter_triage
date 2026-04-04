@@ -98,17 +98,19 @@ async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportDat
         context=intake.additional_context or "None",
     )
 
-    payload = {
-        "model": settings.ollama_model,
-        "messages": [
-            {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        "stream": False,
-        "options": {
-            "temperature": 0.2,      # Low temp for consistent structured output
-            "top_p": 0.9,
-        },
+payload = {
+    "model": settings.ollama_model,
+    "messages": [
+        {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ],
+    "stream": False,
+    "options": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+    },
+    "format": "json",
+},
     }
 
     headers = {
@@ -119,17 +121,17 @@ async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportDat
     start = time.perf_counter()
 
     async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-        response = await client.post(
-            f"{settings.ollama_base_url}/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
+response = await client.post(
+    f"{settings.ollama_base_url}/chat",
+    json=payload,
+    headers=headers,
+)
         response.raise_for_status()
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     result = response.json()
 
-    raw_content: str = result["choices"][0]["message"]["content"].strip()
+    raw_content: str = result["message"]["content"].strip()
 
     # Strip accidental markdown fences if model adds them despite instructions
     if raw_content.startswith("```"):
@@ -162,7 +164,7 @@ async def check_ollama_reachable() -> bool:
     try:
         async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
             r = await client.get(
-                f"{settings.ollama_base_url}/v1/models",
+                f"{settings.ollama_base_url}/tags",
                 headers={"Authorization": f"Bearer {settings.ollama_api_key}"},
             )
             return r.status_code == 200
