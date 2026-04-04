@@ -10,7 +10,7 @@ from datetime import datetime
 from supabase import create_client, Client
 from pydantic_settings import BaseSettings
 
-from models import (
+from backend.models import (
     IntakeRequest,
     TriageReportData,
     IntakeResponse,
