@@ -1,14 +1,11 @@
 """
 llm.py — Ollama Cloud integration for triage report generation.
-
-Ollama Cloud exposes an OpenAI-compatible /v1/chat/completions endpoint.
-Docs: https://ollama.com/docs/api
+Uses Ollama's native /api/chat endpoint.
 """
 
 import json
 import time
 import logging
-from typing import Optional
 
 import httpx
 from pydantic_settings import BaseSettings
@@ -20,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class OllamaSettings(BaseSettings):
     ollama_api_key: str
-    ollama_base_url: str = "https://api.ollama.com"
+    ollama_base_url: str = "https://ollama.com/api"
     ollama_model: str = "llama3.1:8b"
 
     class Config:
@@ -52,40 +49,32 @@ INTAKE DETAILS:
 
 Return ONLY this JSON structure (no extra text):
 {{
-  "urgency_tier": 1 | 2 | 3,
+  "urgency_tier": 1,
   "urgency_reason": "1-2 sentence plain-language reason for this tier",
   "placement_type": "Short placement name (e.g. Isolation Ward, Foster Home, General Population)",
   "placement_icon": "one relevant emoji",
   "placement_description": "One sentence: what this placement means in practice for staff",
   "behavioral_flags": [
-    {{"label": "flag name", "severity": "urgent" | "caution" | "info" | "positive"}}
+    {{"label": "flag name", "severity": "urgent"}}
   ],
   "medical_flags": [
-    {{"label": "flag name", "severity": "urgent" | "caution" | "info" | "positive"}}
+    {{"label": "flag name", "severity": "caution"}}
   ],
   "next_steps": [
     "Step 1: specific, plain-language action",
     "Step 2: specific, plain-language action",
-    "Step 3: specific, plain-language action",
-    "Step 4: specific, plain-language action (add only if needed)"
+    "Step 3: specific, plain-language action"
   ],
   "summary": "2-3 sentence plain-language summary a new staff member can immediately act on"
 }}
 
-Tier definitions:
-- Tier 1 (Critical): Immediate vet attention OR immediate safety risk to staff/other animals
-- Tier 2 (Urgent): Same-day assessment; significant behavioral or medical concerns
-- Tier 3 (Stable): Standard intake processing; no acute concerns
+Severity options: urgent, caution, info, positive
+Urgency tier options: 1 (Critical - immediate vet/safety risk), 2 (Urgent - same-day assessment), 3 (Stable - standard processing)
 
-Be compassionate, practical, and specific. Note missing information that would change your assessment."""
+Be compassionate, practical, and specific."""
 
 
 async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportData, int]:
-    """
-    Call Ollama Cloud and parse the triage JSON response.
-    Returns (TriageReportData, latency_ms).
-    Raises ValueError if the model returns unparseable JSON.
-    """
     user_prompt = TRIAGE_USER_TEMPLATE.format(
         intake_code=intake.intake_code,
         species=intake.species,
@@ -98,19 +87,18 @@ async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportDat
         context=intake.additional_context or "None",
     )
 
-payload = {
-    "model": settings.ollama_model,
-    "messages": [
-        {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
-        {"role": "user", "content": user_prompt},
-    ],
-    "stream": False,
-    "options": {
-        "temperature": 0.2,
-        "top_p": 0.9,
-    },
-    "format": "json",
-},
+    payload = {
+        "model": settings.ollama_model,
+        "messages": [
+            {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+        },
     }
 
     headers = {
@@ -121,11 +109,11 @@ payload = {
     start = time.perf_counter()
 
     async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
-response = await client.post(
-    f"{settings.ollama_base_url}/chat",
-    json=payload,
-    headers=headers,
-)
+        response = await client.post(
+            f"{settings.ollama_base_url}/chat",
+            json=payload,
+            headers=headers,
+        )
         response.raise_for_status()
 
     latency_ms = int((time.perf_counter() - start) * 1000)
@@ -133,7 +121,6 @@ response = await client.post(
 
     raw_content: str = result["message"]["content"].strip()
 
-    # Strip accidental markdown fences if model adds them despite instructions
     if raw_content.startswith("```"):
         raw_content = raw_content.split("```")[1]
         if raw_content.startswith("json"):
@@ -160,7 +147,6 @@ response = await client.post(
 
 
 async def check_ollama_reachable() -> bool:
-    """Ping Ollama Cloud to verify connectivity."""
     try:
         async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
             r = await client.get(
