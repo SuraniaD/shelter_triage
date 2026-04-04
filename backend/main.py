@@ -15,15 +15,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 
-import db
-import llm as llm_module
-from models import (
+import backend.db as db
+import backend.llm as llm_module
+from backend.models import (
     IntakeRequest,
     IntakeResponse,
     IntakeListResponse,
     HealthResponse,
 )
-from llm import settings as llm_settings
+from backend.llm import settings as llm_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
