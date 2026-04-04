@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class OllamaSettings(BaseSettings):
     ollama_api_key: str
     ollama_base_url: str = "https://ollama.com/api"
-    ollama_model: str = "llama3.1:8b"
+    ollama_model: str = "gpt-oss:120b"
 
     class Config:
         env_file = "../.env"
