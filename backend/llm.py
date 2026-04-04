@@ -13,7 +13,7 @@ from typing import Optional
 import httpx
 from pydantic_settings import BaseSettings
 
-from backend.models import IntakeRequest, TriageReportData
+from models import IntakeRequest, TriageReportData
 
 logger = logging.getLogger(__name__)
 
