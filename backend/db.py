@@ -153,7 +153,7 @@ def _row_to_intake_response(row: dict) -> IntakeResponse:
     report_row = row.get("triage_reports")
     report = None
     if report_row:
-        from models import BehavioralFlag
+        from backend.models import BehavioralFlag
         report = TriageReportResponse(
             id=report_row["id"],
             intake_id=report_row["intake_id"],
