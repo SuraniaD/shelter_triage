@@ -9,6 +9,7 @@ Routes:
   GET  /health              — Health check
 """
 
+import random
 import logging
 from contextlib import asynccontextmanager
 
@@ -61,17 +62,27 @@ async def create_intake(body: IntakeRequest):
     """
     Submit a new animal intake and generate an AI triage report.
     Steps:
-      1. Insert intake record into Supabase
-      2. Call Ollama Cloud (llama3.1:8b) for triage analysis
+      1. Insert intake record into Supabase (retries on duplicate code)
+      2. Call Ollama Cloud for triage analysis
       3. Store triage report in Supabase
       4. Return full intake + report
     """
-    try:
-        intake_id = await db.insert_intake(body, ANONYMOUS_USER_ID)
-    except Exception as e:
-        logger.error("DB intake insert failed: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to save intake record")
+    # 1. Persist intake — retry up to 3 times on duplicate intake_code
+    intake_id = None
+    for attempt in range(3):
+        if attempt > 0:
+            body.intake_code = f"INK-{random.randint(10000, 99999)}"
+            logger.info("Retrying intake insert with new code: %s", body.intake_code)
+        try:
+            intake_id = await db.insert_intake(body, ANONYMOUS_USER_ID)
+            break
+        except Exception as e:
+            if attempt < 2 and "23505" in str(e):
+                continue
+            logger.error("DB intake insert failed: %s", e)
+            raise HTTPException(status_code=500, detail="Failed to save intake record")
 
+    # 2. Generate triage via Ollama
     try:
         report_data, latency_ms = await llm_module.generate_triage_report(body)
     except ValueError as e:
@@ -81,6 +92,7 @@ async def create_intake(body: IntakeRequest):
         logger.error("Ollama call failed for intake %s: %s", body.intake_code, e)
         raise HTTPException(status_code=502, detail="Could not reach AI service. Check Ollama Cloud config.")
 
+    # 3. Persist triage report
     try:
         await db.insert_triage_report(
             intake_id=intake_id,
@@ -92,6 +104,7 @@ async def create_intake(body: IntakeRequest):
         logger.error("DB report insert failed: %s", e)
         raise HTTPException(status_code=500, detail="Failed to save triage report")
 
+    # 4. Return full record
     result = await db.get_intake_with_report(intake_id)
     if not result:
         raise HTTPException(status_code=500, detail="Intake saved but could not be retrieved")
