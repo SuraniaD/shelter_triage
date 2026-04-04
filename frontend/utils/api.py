@@ -5,8 +5,16 @@ No auth headers required.
 
 import os
 import requests
+import streamlit as st
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+def _get_backend_url() -> str:
+    try:
+        return st.secrets["BACKEND_URL"].rstrip("/")
+    except Exception:
+        pass
+    return os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+BACKEND_URL = _get_backend_url()
 
 _HEADERS = {"Content-Type": "application/json"}
 
