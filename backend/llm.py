@@ -118,7 +118,7 @@ async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportDat
 
     start = time.perf_counter()
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
         response = await client.post(
             f"{settings.ollama_base_url}/v1/chat/completions",
             json=payload,
@@ -160,7 +160,7 @@ async def generate_triage_report(intake: IntakeRequest) -> tuple[TriageReportDat
 async def check_ollama_reachable() -> bool:
     """Ping Ollama Cloud to verify connectivity."""
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
             r = await client.get(
                 f"{settings.ollama_base_url}/v1/models",
                 headers={"Authorization": f"Bearer {settings.ollama_api_key}"},
