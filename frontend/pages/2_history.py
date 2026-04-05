@@ -6,23 +6,19 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "utils"))
 
 import streamlit as st
-import pandas as pd
 from datetime import datetime
-from utils.session import require_login, get_token
 from utils.api import fetch_intakes, fetch_intake, delete_intake
 
 st.set_page_config(page_title="Intake History — Shelter Triage", page_icon="📂", layout="wide")
-pass  # no auth
 
 # ── Helpers ──────────────────────────────────────────────────────
 
-TIER_LABELS = {1: "🔴 Critical", 2: "🟡 Urgent", 3: "🟢 Stable"}
 TIER_COLORS = {1: "🔴", 2: "🟡", 3: "🟢"}
+TIER_LABELS = {1: "🔴 Critical", 2: "🟡 Urgent", 3: "🟢 Stable"}
 
 def severity_css(severity: str) -> str:
     return {"urgent": "flag-urgent", "caution": "flag-caution",
             "info": "flag-info", "positive": "flag-positive"}.get(severity, "flag-info")
-
 
 def fmt_date(dt_str: str) -> str:
     try:
@@ -42,9 +38,8 @@ if "selected_intake_id" not in st.session_state:
 # ── Page ─────────────────────────────────────────────────────────
 st.markdown("## 📂 Intake History")
 
-# Fetch data
 PAGE_SIZE = 15
-data, error = fetch_intakes(get_token(), page=st.session_state["history_page"], page_size=PAGE_SIZE)
+data, error = fetch_intakes(page=st.session_state["history_page"], page_size=PAGE_SIZE)
 
 if error:
     st.error(f"Could not load intakes: {error}")
@@ -52,9 +47,9 @@ if error:
 
 items = data.get("items", [])
 total = data.get("total", 0)
-total_pages = max(1, -(-total // PAGE_SIZE))  # Ceiling division
+total_pages = max(1, -(-total // PAGE_SIZE))
 
-# ── Filters bar ──────────────────────────────────────────────────
+# ── Filters ───────────────────────────────────────────────────────
 f1, f2, f3 = st.columns([2, 1, 1])
 with f1:
     search_q = st.text_input("🔍 Filter by ID, species, or breed", placeholder="e.g. INK-47291 or Dog")
@@ -65,7 +60,7 @@ with f3:
     if st.button("🔄 Refresh", use_container_width=True):
         st.rerun()
 
-# Apply client-side filters
+# Client-side filters
 filtered = items
 if search_q:
     q = search_q.lower()
@@ -80,7 +75,7 @@ if tier_filter != "All":
 st.caption(f"Showing {len(filtered)} of {total} total records")
 st.divider()
 
-# ── Two-column layout: list | detail ─────────────────────────────
+# ── Two-column layout ─────────────────────────────────────────────
 list_col, detail_col = st.columns([1, 1.4], gap="large")
 
 with list_col:
@@ -92,17 +87,16 @@ with list_col:
             tier_icon = TIER_COLORS.get(tier, "⚪")
             selected = st.session_state["selected_intake_id"] == item["id"]
 
-            with st.container():
-                btn_label = (
-                    f"{tier_icon} **{item['intake_code']}** — {item['species']}"
-                    + (f", {item.get('estimated_age', '')}" if item.get("estimated_age") else "")
-                    + (f"\n_{item.get('breed', '')}_" if item.get("breed") else "")
-                    + f"\n{fmt_date(item['created_at'])}"
-                )
-                if st.button(btn_label, key=f"sel_{item['id']}", use_container_width=True,
-                             type="primary" if selected else "secondary"):
-                    st.session_state["selected_intake_id"] = item["id"]
-                    st.rerun()
+            btn_label = (
+                f"{tier_icon} **{item['intake_code']}** — {item['species']}"
+                + (f", {item.get('estimated_age', '')}" if item.get("estimated_age") else "")
+                + (f"\n_{item.get('breed', '')}_" if item.get("breed") else "")
+                + f"\n{fmt_date(item['created_at'])}"
+            )
+            if st.button(btn_label, key=f"sel_{item['id']}", use_container_width=True,
+                         type="primary" if selected else "secondary"):
+                st.session_state["selected_intake_id"] = item["id"]
+                st.rerun()
 
     # Pagination
     st.divider()
@@ -123,7 +117,7 @@ with detail_col:
     if not st.session_state["selected_intake_id"]:
         st.info("👈 Select an intake to view its full triage report.")
     else:
-        intake_data, err = fetch_intake(st.session_state["selected_intake_id"], get_token())
+        intake_data, err = fetch_intake(st.session_state["selected_intake_id"])
         if err:
             st.error(f"Could not load intake: {err}")
         elif not intake_data:
@@ -132,9 +126,8 @@ with detail_col:
             r = intake_data
             report = r.get("triage_report")
 
-            # Header
-            tier = report.get("urgency_tier", 3) if report else None
-            tier_label = TIER_LABELS.get(tier, "Pending") if tier else "⏳ Pending"
+            tier = report.get("urgency_tier") if report else None
+            tier_label = TIER_LABELS.get(tier, "⏳ Pending") if tier else "⏳ Pending"
 
             h1, h2 = st.columns([2, 1])
             with h1:
@@ -145,7 +138,6 @@ with detail_col:
 
             st.divider()
 
-            # Intake raw data
             with st.expander("📋 Intake Details", expanded=False):
                 d1, d2 = st.columns(2)
                 with d1:
@@ -192,22 +184,8 @@ with detail_col:
                     st.write(report.get("summary", "—"))
 
                 st.caption(
-                    f"🤖 {report.get('model_used', 'llama3.1:8b')} · "
+                    f"🤖 {report.get('model_used', 'gpt-oss:120b')} · "
                     f"{report.get('latency_ms', '?')}ms"
                 )
             else:
                 st.warning("No triage report available for this intake.")
-
-            # Admin delete
-            if get_user_role() == "admin":
-                st.divider()
-                with st.expander("⚠️ Admin Actions"):
-                    st.warning("Deleting an intake is permanent and cannot be undone.")
-                    if st.button("🗑️ Delete This Intake", type="secondary", key="del_btn"):
-                        ok, del_err = delete_intake(r["id"], get_token())
-                        if ok:
-                            st.success("Intake deleted.")
-                            st.session_state["selected_intake_id"] = None
-                            st.rerun()
-                        else:
-                            st.error(f"Delete failed: {del_err}")
