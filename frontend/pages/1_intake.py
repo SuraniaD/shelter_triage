@@ -32,6 +32,10 @@ def tier_css(tier: int) -> str:
 if "intake_code" not in st.session_state:
     st.session_state["intake_code"] = gen_intake_code()
 
+# Always regenerate on page load unless a report is in progress
+if not st.session_state.get("last_report"):
+    st.session_state["intake_code"] = gen_intake_code()
+
 if "last_report" not in st.session_state:
     st.session_state["last_report"] = None
 
