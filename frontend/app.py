@@ -27,6 +27,8 @@ st.markdown("""
   .flag-caution { background:#3d2a10; color:#e8a83a; padding:2px 8px; border-radius:3px; font-size:12px; margin:2px; display:inline-block; }
   .flag-info    { background:#1c3328; color:#4caf72; padding:2px 8px; border-radius:3px; font-size:12px; margin:2px; display:inline-block; }
   .flag-positive{ background:#142233; color:#5b9fd4; padding:2px 8px; border-radius:3px; font-size:12px; margin:2px; display:inline-block; }
+  [data-testid="stSidebarNav"] { display: none; }
+</style>
 </style>
 """, unsafe_allow_html=True)
 
