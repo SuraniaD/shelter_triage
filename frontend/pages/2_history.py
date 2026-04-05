@@ -10,7 +10,7 @@ from datetime import datetime
 from utils.api import fetch_intakes, fetch_intake, delete_intake
 
 st.set_page_config(page_title="Intake History — Shelter Triage", page_icon="📂", layout="wide")
-
+st.markdown('<style>[data-testid="stSidebarNav"] { display: none; }</style>', unsafe_allow_html=True)
 # ── Helpers ──────────────────────────────────────────────────────
 
 TIER_COLORS = {1: "🔴", 2: "🟡", 3: "🟢"}
