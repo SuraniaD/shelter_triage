@@ -20,11 +20,11 @@ with st.sidebar:
     st.page_link("app.py",             label="New Intake",     icon="➕")
     st.page_link("pages/2_history.py", label="Intake History", icon="📂")
     st.divider()
-    with st.expander("System Status"):
+with st.expander("System Status"):
         health = fetch_health()
-        st.write("🟢 API" if health.get("status") == "ok" else "🔴 API")
-        st.write("🟢 Ollama" if health.get("ollama_reachable") else "🔴 Ollama")
-        st.write("🟢 Supabase" if health.get("supabase_reachable") else "🔴 Supabase")
+        st.write("🟢 System Connected" if health.get("status") == "ok" else "🔴 System Connected")
+        st.write("🟢 LLM Engine" if health.get("ollama_reachable") else "🔴 LLM Engine")
+        st.write("🟢 Database" if health.get("supabase_reachable") else "🔴 Database")
 # ── Helpers ──────────────────────────────────────────────────────
 
 TIER_COLORS = {1: "🔴", 2: "🟡", 3: "🟢"}
