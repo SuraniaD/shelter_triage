@@ -3,6 +3,7 @@
 An AI-powered intake triage tool built for animal shelter staff. Staff enter free-text observations about a newly arrived animal — behavior, physical condition, source — and receive an instant structured triage report: urgency tier, recommended placement, behavioral and medical flags, and step-by-step next actions.
 
 No veterinary interpretation needed. No login required. Just open the link and start triaging.
+Shelter Intake Triage Assistant- https://shelter-triage.streamlit.app/
 
 ---
 
