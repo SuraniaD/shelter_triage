@@ -54,7 +54,6 @@ shelter-triage/
 │       └── session.py   # Session state helpers (no-op, open access)
 ├── supabase/
 │   └── schema.sql       # Full DB schema, RLS policies, indexes
-├── .env.example
 ├── requirements.txt
 └── README.md
 ```
