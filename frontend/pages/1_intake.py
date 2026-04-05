@@ -53,7 +53,7 @@ with form_col:
     code_col, regen_col = st.columns([3, 1])
     with code_col:
         st.text_input("Intake ID", value=st.session_state["intake_code"],
-                      disabled=True, key="intake_code_display")
+                      disabled=True)
     with regen_col:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("↻ New ID", use_container_width=True):
