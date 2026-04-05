@@ -11,6 +11,20 @@ from utils.api import fetch_intakes, fetch_intake, delete_intake
 
 st.set_page_config(page_title="Intake History — Shelter Triage", page_icon="📂", layout="wide")
 st.markdown('<style>[data-testid="stSidebarNav"] { display: none; }</style>', unsafe_allow_html=True)
+
+from utils.api import fetch_health
+
+with st.sidebar:
+    st.markdown("### 🐾 Shelter Triage")
+    st.divider()
+    st.page_link("app.py",             label="New Intake",     icon="➕")
+    st.page_link("pages/2_history.py", label="Intake History", icon="📂")
+    st.divider()
+    with st.expander("System Status"):
+        health = fetch_health()
+        st.write("🟢 API" if health.get("status") == "ok" else "🔴 API")
+        st.write("🟢 Ollama" if health.get("ollama_reachable") else "🔴 Ollama")
+        st.write("🟢 Supabase" if health.get("supabase_reachable") else "🔴 Supabase")
 # ── Helpers ──────────────────────────────────────────────────────
 
 TIER_COLORS = {1: "🔴", 2: "🟡", 3: "🟢"}
